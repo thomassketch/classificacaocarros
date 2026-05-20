@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classificador de Carros por Imagem</title>
+    <title>Classificador de Veículos: Foto ou Arquivo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -18,6 +18,7 @@
             --accent-hover: #0284c7;
             --success: #22c55e;
             --border-color: #334155;
+            --danger: #ef4444;
         }
 
         * {
@@ -76,14 +77,15 @@
             }
         }
 
-        .upload-section {
+        .interaction-section {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
         }
 
-        #preview-container {
+        /* Container que alterna entre Preview de Foto e Vídeo ao vivo */
+        .visual-container {
             width: 320px;
             height: 320px;
             background: #020617;
@@ -95,14 +97,15 @@
             justify-content: center;
             position: relative;
             box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.6);
-            transition: border-color 0.2s ease;
+            transition: all 0.2s ease;
         }
 
-        #preview-container.dragover {
+        .visual-container.live-camera {
+            border-style: solid;
             border-color: var(--accent);
-            background: #0f172a;
         }
 
+        /* Preview da imagem capturada/subida */
         #image-preview {
             width: 100%;
             height: 100%;
@@ -111,33 +114,98 @@
             padding: 10px;
         }
 
+        /* Transmissão de vídeo ao vivo */
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+            transform: scaleX(-1); /* Espelha a câmera para ficar natural */
+        }
+
         .placeholder-text {
             color: var(--text-muted);
             font-size: 0.9rem;
             text-align: center;
             padding: 20px;
             line-height: 1.4;
+            position: absolute;
         }
 
-        .btn-upload {
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 320px;
             margin-top: 20px;
-            background-color: var(--accent);
-            color: #0f172a;
+        }
+
+        .btn {
             border: none;
-            padding: 12px 24px;
+            padding: 12px 20px;
             font-size: 1rem;
             font-weight: 600;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s ease;
-            width: 100%;
-            max-width: 320px;
             text-align: center;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .btn-upload:hover {
+        .btn-primary {
+            background-color: var(--accent);
+            color: #0f172a;
+        }
+
+        .btn-primary:hover {
             background-color: var(--accent-hover);
             transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: #334155;
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .btn-capture {
+            background-color: var(--success);
+            color: #fff;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: #fff;
+        }
+
+        .btn:disabled {
+            background-color: #475569;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.7;
+        }
+
+        /* Controles específicos para quando a câmera está ligada */
+        #camera-controls {
+            display: none;
+            gap: 12px;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 20px;
+        }
+
+        #standard-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
         }
 
         #file-input {
@@ -171,7 +239,7 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             transition: all 0.2s ease;
-            opacity: 0.6; /* Fica meio apagado até ter uma previsão real */
+            opacity: 0.6;
         }
 
         .class-row.active {
@@ -217,7 +285,7 @@
             width: 0%;
             background: var(--accent);
             border-radius: 4px;
-            transition: width 0.3s ease; /* Transição mais suave para imagem estática */
+            transition: width 0.3s ease;
         }
 
         .class-row.highest .progress-bar-fill {
@@ -230,6 +298,7 @@
             color: var(--accent);
             font-weight: 500;
             text-align: center;
+            max-width: 320px;
         }
     </style>
 </head>
@@ -238,36 +307,43 @@
     <div class="container">
         <header>
             <h1>Classificador de Veículos</h1>
-            <p>Faça o upload de uma foto para identificar o formato do carro</p>
+            <p>Tire uma foto agora ou envie um arquivo do carro</p>
         </header>
 
         <div class="main-content">
-            <!-- Coluna da Esquerda: Upload e Preview -->
-            <div class="upload-section">
-                <div id="preview-container">
+            <div class="interaction-section">
+                <div class="visual-container" id="visual-container">
                     <img id="image-preview" alt="Pré-visualização do carro">
+                    <video id="video-feed" autoplay playsinline></video>
                     <div class="placeholder-text" id="placeholder">
-                        Arraste uma imagem aqui <br>ou clique no botão abaixo.
+                        Suba uma imagem, arraste um arquivo,<br>ou clique em "Usar Câmera".
                     </div>
                 </div>
                 
-                <input type="file" id="file-input" accept="image/*">
-                <button class="btn-upload" type="button" onclick="document.getElementById('file-input').click()">Selecionar Imagem</button>
+                <div class="action-buttons" id="standard-controls">
+                    <input type="file" id="file-input" accept="image/*">
+                    <button class="btn btn-secondary" type="button" id="btn-upload" onclick="document.getElementById('file-input').click()">Selecionar Arquivo</button>
+                    <button class="btn btn-primary" type="button" id="btn-camera" onclick="startCamera()">Usar Câmera</button>
+                </div>
+
+                <div id="camera-controls">
+                    <button class="btn btn-capture" type="button" onclick="takePhotoAndPredict()">Capturar e Analisar</button>
+                    <button class="btn btn-danger" type="button" onclick="stopCamera()">Voltar</button>
+                </div>
                 
                 <div id="status-message">Carregando inteligência artificial...</div>
             </div>
 
-            <!-- Coluna da Direita: Resultados -->
             <div class="results-section">
                 <div class="results-title">Resultado da Análise</div>
                 <div class="label-container" id="label-container">
-                    <!-- As barras de resultado serão geradas aqui automaticamente -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts do TensorFlow.js e Teachable Machine Image -->
+    <canvas id="hidden-canvas" width="320" height="320" style="display:none;"></canvas>
+
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
@@ -275,15 +351,28 @@
         // Link estável do seu modelo do Teachable Machine
         const URL = "https://teachablemachine.withgoogle.com/models/7Wz03dDLJ/";
 
-        let model, maxPredictions;
+        let model, maxPredictions, mediaStream;
+        
+        // Elementos UI
         const statusMessage = document.getElementById('status-message');
         const fileInput = document.getElementById('file-input');
         const imagePreview = document.getElementById('image-preview');
+        const videoFeed = document.getElementById('video-feed');
         const placeholder = document.getElementById('placeholder');
-        const previewContainer = document.getElementById('preview-container');
+        const visualContainer = document.getElementById('visual-container');
+        const hiddenCanvas = document.getElementById('hidden-canvas');
+        
+        // Contêineres de botões
+        const standardControls = document.getElementById('standard-controls');
+        const cameraControls = document.getElementById('camera-controls');
+        const btnUpload = document.getElementById('btn-upload');
+        const btnCamera = document.getElementById('btn-camera');
 
         // Carrega o modelo de IA assim que a página abre
         async function loadModel() {
+            btnUpload.disabled = true;
+            btnCamera.disabled = true;
+            
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
 
@@ -296,10 +385,12 @@
                 
                 statusMessage.style.color = "var(--success)";
                 statusMessage.innerText = "IA pronta! Aguardando imagem.";
+                btnUpload.disabled = false;
+                btnCamera.disabled = false;
             } catch (error) {
                 console.error("Erro ao carregar o modelo Teachable Machine:", error);
-                statusMessage.style.color = "#ef4444";
-                statusMessage.innerText = "Erro ao carregar o modelo de IA.";
+                statusMessage.style.color = "var(--danger)";
+                statusMessage.innerText = "Erro fatal ao carregar o modelo de IA.";
             }
         }
 
@@ -327,11 +418,110 @@
             }
         }
 
-        // Gerencia a leitura do arquivo enviado pelo usuário
+        // ==========================================
+        // GESTÃO DO MODO CÂMERA AO VIVO
+        // ==========================================
+
+        async function startCamera() {
+            if (!model) return;
+            
+            statusMessage.style.color = "var(--accent)";
+            statusMessage.innerText = "Pedindo permissão para usar a câmera...";
+
+            // Tenta acessar a câmera
+            try {
+                // Configuração para preferir câmera traseira em celular, se disponível
+                const constraints = { video: { facingMode: "environment" } };
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoFeed.srcObject = mediaStream;
+                
+                // Ajusta a interface para o modo "Câmera ao Vivo"
+                placeholder.style.display = 'none';
+                imagePreview.style.display = 'none';
+                videoFeed.style.display = 'block';
+                visualContainer.classList.add('live-camera');
+                
+                // Troca os botões
+                standardControls.style.display = 'none';
+                cameraControls.style.display = 'flex';
+                
+                statusMessage.innerText = "Câmera ativada! Enquadre o veículo.";
+            } catch (error) {
+                console.error("Erro ao acessar a câmera:", error);
+                statusMessage.style.color = "var(--danger)";
+                statusMessage.innerText = "Não foi possível acessar a câmera. Verifique as permissões do navegador.";
+                stopCamera(); // Garante que a UI volte ao normal
+            }
+        }
+
+        function stopCamera() {
+            // Para todos os tracks da câmera (desliga o LED de atividade)
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Ajusta a interface de volta para o modo "Upload/Preview"
+            videoFeed.style.display = 'none';
+            visualContainer.classList.remove('live-camera');
+            cameraControls.style.display = 'none';
+            standardControls.style.display = 'flex';
+            
+            // Se já havia um preview de imagem, mostra ele de volta
+            if (imagePreview.src && imagePreview.src !== window.location.href) {
+                imagePreview.style.display = 'block';
+            } else {
+                placeholder.style.display = 'block';
+            }
+            
+            statusMessage.style.color = "var(--text-main)";
+            statusMessage.innerText = "Câmera desligada.";
+        }
+
+        async function takePhotoAndPredict() {
+            if (!model || !mediaStream) return;
+            
+            statusMessage.style.color = "var(--accent)";
+            statusMessage.innerText = "Capturando e analisando imagem...";
+
+            // Usa o canvas escondido para desenhar o frame atual do vídeo
+            const context = hiddenCanvas.getContext('2d');
+            
+            // Corrige o espelhamento para que a foto capturada não fique invertida
+            context.translate(hiddenCanvas.width, 0);
+            context.scale(-1, 1);
+            
+            // Desenha o frame do vídeo no canvas mantendo a proporção (object-fit cover simulado)
+            context.drawImage(videoFeed, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+            
+            // Reseta a transformação do canvas
+            context.setTransform(1, 0, 0, 1, 0, 0);
+
+            // Converte o canvas para uma imagem de dados que pode ser usada no preview
+            const dataUrl = hiddenCanvas.toDataURL('image/jpeg');
+            imagePreview.src = dataUrl;
+            
+            // Para a câmera imediatamente após capturar
+            stopCamera();
+            
+            // Garante que o preview da foto tirada está visível
+            imagePreview.style.display = 'block';
+            placeholder.style.display = 'none';
+
+            // Dispara a previsão usando a imagem que acabamos de capturar
+            // Nota: passamos o elemento 'imagePreview' pois ele já está com o src atualizado
+            statusMessage.innerText = "Analisando formato do veículo...";
+            await predict(imagePreview);
+            statusMessage.style.color = "var(--success)";
+            statusMessage.innerText = "Análise concluída com foto capturada!";
+        }
+
+        // ==========================================
+        // GESTÃO DO MODO ARQUIVO (UPLOAD)
+        // ==========================================
+
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             processFile(file);
         });
 
@@ -340,6 +530,9 @@
                 alert("O modelo ainda está carregando. Aguarde um instante.");
                 return;
             }
+
+            // Garante que se a câmera estava ligada, ela seja desligada
+            stopCamera();
 
             const reader = new FileReader();
             reader.onload = function(event) {
@@ -351,15 +544,19 @@
                 // Dispara a previsão assim que o elemento da imagem terminar de carregar os pixels
                 imagePreview.onload = async function() {
                     statusMessage.style.color = "var(--accent)";
-                    statusMessage.innerText = "Analisando formato do carro...";
+                    statusMessage.innerText = "Analisando formato do carro enviado...";
                     await predict(imagePreview);
-                    statusMessage.innerText = "Análise concluída!";
+                    statusMessage.style.color = "var(--success)";
+                    statusMessage.innerText = "Análise do arquivo concluída!";
                 };
             };
             reader.readAsDataURL(file);
         }
 
-        // Executa a classificação da imagem estática
+        // ==========================================
+        // LÓGICA DE PREVISÃO (COMUM ÀS DUAS VIAS)
+        // ==========================================
+
         async function predict(imageElement) {
             const prediction = await model.predict(imageElement);
             
@@ -396,18 +593,18 @@
         }
 
         // Bônus: Suporte para arrastar e soltar a imagem direto no quadrado
-        previewContainer.addEventListener('dragover', (e) => {
+        visualContainer.addEventListener('dragover', (e) => {
             e.preventDefault();
-            previewContainer.classList.add('dragover');
+            visualContainer.classList.add('dragover');
         });
 
-        previewContainer.addEventListener('dragleave', () => {
-            previewContainer.classList.remove('dragover');
+        visualContainer.addEventListener('dragleave', () => {
+            visualContainer.classList.remove('dragover');
         });
 
-        previewContainer.addEventListener('drop', (e) => {
+        visualContainer.addEventListener('drop', (e) => {
             e.preventDefault();
-            previewContainer.classList.remove('dragover');
+            visualContainer.classList.remove('dragover');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 fileInput.files = files;
